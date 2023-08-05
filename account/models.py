@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.dispatch import receiver
@@ -32,6 +33,44 @@ class CustomUser(AbstractUser):
             "Unselect this instead of deleting accounts."
         ),
     )
+    is_seller = models.BooleanField(
+        _("seller"),
+        default=False,
+        help_text=_(
+            "If selected it user is approved seller. "
+            "Unselect this if you want block seller."
+        ),
+    )
+    # Taxpayer Identification Number (ИНН)
+    tin = models.PositiveIntegerField(
+        validators=[
+            MaxValueValidator(999999999999),  # Максимальное значение на 12 цифр
+            MinValueValidator(100000000000)  # Минимальное значение на 12 цифр
+        ],
+        blank=True
+    )
+    checking_account = models.PositiveIntegerField(
+        validators=[
+            MaxValueValidator(99999999999999999999),  # Максимальное значение на 20 цифр
+            MinValueValidator(10000000000000000000)  # Минимальное значение на 20 цифр
+        ],
+        blank=True
+    )
+    bank_identification_code = models.PositiveIntegerField(
+        validators=[
+            MaxValueValidator(999999999),  # Максимальное значение на 9 цифр
+            MinValueValidator(100000000)  # Минимальное значение на 9 цифр
+        ],
+        blank=True
+    )
+    tax_registration_reason_code = models.PositiveIntegerField(
+        validators=[
+            MaxValueValidator(999999999),  # Максимальное значение на 9 цифр
+            MinValueValidator(100000000)  # Минимальное значение на 9 цифр
+        ],
+        blank=True
+    )
+
 
     objects = UserManager()
     USERNAME_FIELD = 'email'
@@ -45,22 +84,33 @@ class CustomUser(AbstractUser):
         self.activation_code = code
 
 
-# @receiver(reset_password_token_created)
-# @permission_classes([AllowAny, ])
-# def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
-#     email_plaintext_message = "{}{}".format(reverse('password_reset:reset-password-request'),
-#                                                    reset_password_token.key)
-#     # ?token=
-#     link = f'http://{HOST}{email_plaintext_message}'
-#
-#     send_mail(
-#         # title:
-#         "Восстановление пароля для {title}".format(title="Some website title"),
-#         # message:
-#         f'Здравствуйте, восстановите ваш пароль!\nЧтобы восстановить ваш пароль нужно перейти по ссылке ниже:\n'
-#         f'\n{link}',
-#         # from:
-#         "noreply@somehost.local",
-#         # to:
-#         [reset_password_token.user.email],
-#     )
+class UserProfile(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    # saved_products = models.ManyToManyField(Product, blank=True)
+
+
+class SellerProfile(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    store_name = models.CharField(max_length=255)
+    description = models.TextField()
+
+
+@receiver(reset_password_token_created)
+@permission_classes([AllowAny, ])
+def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
+    email_plaintext_message = "{}{}".format(reverse('password_reset:reset-password-request'),
+                                                   reset_password_token.key)
+    # ?token=
+    link = f'http://{HOST}{email_plaintext_message}'
+
+    send_mail(
+        # title:
+        "Восстановление пароля для {title}".format(title="Mordo"),
+        # message:
+        f'Здравствуйте, восстановите ваш пароль!\nЧтобы восстановить ваш пароль нужно перейти по ссылке ниже:\n'
+        f'\n{link}',
+        # from:
+        "noreply@somehost.local",
+        # to:
+        [reset_password_token.user.email],
+    )
