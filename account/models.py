@@ -86,13 +86,18 @@ class CustomUser(AbstractUser):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
-    # saved_products = models.ManyToManyField(Product, blank=True)
+    # saved_products = models.ManyToManyField(Product, blank=True, related_name='saved_by')
+    birthdate = models.DateField(null=True, blank=True)
+    address = models.CharField(max_length=255, blank=True)
+    phone_number = models.CharField(max_length=20, blank=True)
 
 
 class SellerProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     store_name = models.CharField(max_length=255)
     description = models.TextField()
+    website = models.URLField(blank=True)
+    social_media = models.CharField(max_length=255, blank=True)
 
 
 @receiver(reset_password_token_created)
