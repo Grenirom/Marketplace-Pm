@@ -41,7 +41,13 @@ class CustomUser(AbstractUser):
             "Unselect this if you want block seller."
         ),
     )
-
+    is_seller_pending = models.BooleanField(
+        _("seller pending"),
+        default=False,
+        help_text=_("Indicates whether the user's seller application is pending approval."
+                    "If True means pending, if False means not pending."
+                    ),
+    )
 
     objects = UserManager()
     USERNAME_FIELD = 'email'
@@ -74,29 +80,25 @@ class SellerProfile(models.Model):
         validators=[
             MaxValueValidator(999999999999),  # Максимальное значение на 12 цифр
             MinValueValidator(100000000000)  # Минимальное значение на 12 цифр
-        ],
-        blank=True, null=True
+        ]
     )
     checking_account = models.PositiveBigIntegerField(
         validators=[
             MaxValueValidator(99999999999999999999),  # Максимальное значение на 20 цифр
             MinValueValidator(10000000000000000000)  # Минимальное значение на 20 цифр
-        ],
-        blank=True, null=True
+        ]
     )
     bank_identification_code = models.PositiveBigIntegerField(
         validators=[
             MaxValueValidator(999999999),  # Максимальное значение на 9 цифр
             MinValueValidator(100000000)  # Минимальное значение на 9 цифр
-        ],
-        blank=True, null=True
+        ]
     )
     tax_registration_reason_code = models.PositiveBigIntegerField(
         validators=[
             MaxValueValidator(999999999),  # Максимальное значение на 9 цифр
             MinValueValidator(100000000)  # Минимальное значение на 9 цифр
-        ],
-        blank=True, null=True
+        ]
     )
 
 

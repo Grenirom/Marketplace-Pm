@@ -3,10 +3,11 @@ from django.urls import path
 from django.views.decorators.cache import cache_page
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
+from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import ListModelMixin, UpdateModelMixin
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from rest_framework import generics
+from rest_framework import generics, permissions
 from rest_framework.response import Response
 
 from rest_framework import status
@@ -49,25 +50,63 @@ class UserViewSet(ListModelMixin, GenericViewSet):
         try:
             user = User.objects.get(activation_code=uuid)
         except User.DoesNotExist:
-            return Response({'msg': 'Invalid link or link expired!'}, status=400)
+            return Response({'msg': 'Неверная ссылка либо истек срок ссылки!'}, status=400)
         user.is_active = True
         user.activation_code = ''
         user.save()
-        return Response({'msg': 'User successfully activated!'}, status=200)
+        return Response({'msg': 'Пользователь успешно активирован!'}, status=200)
 
     # @cache_page(60 * 15)
-    @action(['GET'], detail=True)
-    def favorites(self, request, pk):
-        product = self.get_object()
-        favorites = product.favorites.filter(favorite=True)
-        serializer = FavoriteListSerializer(instance=favorites, many=True)
-        return Response(serializer.data, status=200)
+    # @action(['GET'], detail=True)
+    # def favorites(self, request, pk):
+    #     product = self.get_object()
+    #     favorites = product.favorites.filter(favorite=True)
+    #     serializer = FavoriteListSerializer(instance=favorites, many=True)
+    #     return Response(serializer.data, status=200)
+
+
+class SellerApplicationView(APIView):
+    permission_classes = [permissions.IsAuthenticated, ]
+
+    def post(self, request):
+        user = request.user
+        if user.is_seller_pending:
+            return Response({"message": "Your seller application is already pending."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_seller_pending = True
+        user.save()
+
+        return Response({"message": "Your seller application has been submitted."},
+                        status=status.HTTP_200_OK)
+
+
+class ApproveSellerView(APIView):
+    permission_classes = [permissions.IsAdminUser, ]
+
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({"message": "User not found."},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        if not user.is_seller_pending:
+            return Response({"message": "User's seller application is not pending approval."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_seller_pending = False
+        user.is_seller = True
+        user.save()
+
+        return Response({"message": "Seller approved."},
+                        status=status.HTTP_200_OK)
 
 
 class UserUpdateViewSet(UpdateModelMixin, GenericViewSet):
     queryset = User.objects.all()
     serializer_class = serializers.UserUpdateSerializer
-    permission_classes = (IsAuthorOrAdmin, )
+    permission_classes = (IsAuthorOrAdmin,)
 
 
 class LoginView(TokenObtainPairView):
