@@ -42,35 +42,34 @@ class CustomUser(AbstractUser):
         ),
     )
     # Taxpayer Identification Number (ИНН)
-    tin = models.PositiveIntegerField(
+    tin = models.PositiveBigIntegerField(
         validators=[
             MaxValueValidator(999999999999),  # Максимальное значение на 12 цифр
             MinValueValidator(100000000000)  # Минимальное значение на 12 цифр
         ],
-        blank=True
+        blank=True, null=True
     )
-    checking_account = models.PositiveIntegerField(
+    checking_account = models.PositiveBigIntegerField(
         validators=[
             MaxValueValidator(99999999999999999999),  # Максимальное значение на 20 цифр
             MinValueValidator(10000000000000000000)  # Минимальное значение на 20 цифр
         ],
-        blank=True
+        blank=True, null=True
     )
-    bank_identification_code = models.PositiveIntegerField(
+    bank_identification_code = models.PositiveBigIntegerField(
         validators=[
             MaxValueValidator(999999999),  # Максимальное значение на 9 цифр
             MinValueValidator(100000000)  # Минимальное значение на 9 цифр
         ],
-        blank=True
+        blank=True, null=True
     )
-    tax_registration_reason_code = models.PositiveIntegerField(
+    tax_registration_reason_code = models.PositiveBigIntegerField(
         validators=[
             MaxValueValidator(999999999),  # Максимальное значение на 9 цифр
             MinValueValidator(100000000)  # Минимальное значение на 9 цифр
         ],
-        blank=True
+        blank=True, null=True
     )
-
 
     objects = UserManager()
     USERNAME_FIELD = 'email'
@@ -104,7 +103,7 @@ class SellerProfile(models.Model):
 @permission_classes([AllowAny, ])
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
     email_plaintext_message = "{}{}".format(reverse('password_reset:reset-password-request'),
-                                                   reset_password_token.key)
+                                            reset_password_token.key)
     # ?token=
     link = f'http://{HOST}{email_plaintext_message}'
 
