@@ -33,7 +33,7 @@ INSTALLED_APPS = [
 
     # my_apps
     'account',
-
+    'category',
 ]
 
 MIDDLEWARE = [

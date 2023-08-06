@@ -75,6 +75,8 @@ class SellerProfile(models.Model):
     description = models.TextField()
     website = models.URLField(blank=True, null=True)
     social_media = models.CharField(max_length=255, blank=True, null=True)
+    country = models.CharField(max_length=150, blank=True, null=True)
+    city = models.CharField(max_length=150, blank=True, null=True)
     # Taxpayer Identification Number (ИНН)
     tin = models.PositiveBigIntegerField(
         validators=[
