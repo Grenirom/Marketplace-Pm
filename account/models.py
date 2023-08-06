@@ -41,6 +41,34 @@ class CustomUser(AbstractUser):
             "Unselect this if you want block seller."
         ),
     )
+
+
+    objects = UserManager()
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
+
+    def __str__(self):
+        return f'{self.email}'
+
+    def create_activation_code(self):
+        code = str(uuid4())
+        self.activation_code = code
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    # saved_products = models.ManyToManyField(Product, blank=True, related_name='saved_by')
+    birthdate = models.DateField(null=True, blank=True)
+    address = models.CharField(max_length=255, blank=True)
+    phone_number = models.CharField(max_length=20, blank=True)
+
+
+class SellerProfile(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    store_name = models.CharField(max_length=255)
+    description = models.TextField()
+    website = models.URLField(blank=True, null=True)
+    social_media = models.CharField(max_length=255, blank=True, null=True)
     # Taxpayer Identification Number (ИНН)
     tin = models.PositiveBigIntegerField(
         validators=[
@@ -70,33 +98,6 @@ class CustomUser(AbstractUser):
         ],
         blank=True, null=True
     )
-
-    objects = UserManager()
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []
-
-    def __str__(self):
-        return f'{self.email}'
-
-    def create_activation_code(self):
-        code = str(uuid4())
-        self.activation_code = code
-
-
-class UserProfile(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
-    # saved_products = models.ManyToManyField(Product, blank=True, related_name='saved_by')
-    birthdate = models.DateField(null=True, blank=True)
-    address = models.CharField(max_length=255, blank=True)
-    phone_number = models.CharField(max_length=20, blank=True)
-
-
-class SellerProfile(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
-    store_name = models.CharField(max_length=255)
-    description = models.TextField()
-    website = models.URLField(blank=True)
-    social_media = models.CharField(max_length=255, blank=True)
 
 
 @receiver(reset_password_token_created)
