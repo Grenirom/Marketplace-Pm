@@ -118,7 +118,7 @@ EMAIL_HOST_PASSWORD = config('EMAIL_PASSWORD')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# AUTH_USER_MODEL =
+AUTH_USER_MODEL = 'account.CustomUser'
 
 # SWAGGER_SETTINGS = {
 #     'SECURITY_DEFINITIONS': {
