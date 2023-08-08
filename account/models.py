@@ -1,50 +1,124 @@
+from uuid import uuid4
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from uuid import uuid4
-import phonenumbers
+from django.dispatch import receiver
+from django.urls import reverse
+from django_rest_passwordreset.signals import reset_password_token_created
+from django.core.mail import send_mail
+from rest_framework.decorators import permission_classes
+from rest_framework.permissions import AllowAny
 
-from account.managers import MyManager
+from .managers import UserManager
+
+HOST = 'localhost:3000'
 
 
 class CustomUser(AbstractUser):
-    email = models.EmailField(_("email"), unique=True)
-    first_name = models.CharField(_("first_name"), max_length=120)
-    last_name = models.CharField(_("last_name"), max_length=120)
-    username = models.CharField(_("username"), max_length=120, blank=True)
-    password = models.CharField(_("password"), max_length=123)
-    activation_code = models.CharField(_("activation_code"), max_length=255, blank=True)
-    is_active = models.BooleanField(_("active"), default=False)
-    image = models.ImageField(upload_to='images')
+    email = models.EmailField('email address', unique=True)
+    password = models.CharField(max_length=255)
+    activation_code = models.CharField(max_length=255, blank=True)
+    username = models.CharField(max_length=100, blank=True)
+    first_name = models.CharField(_("first name"), max_length=150)
+    last_name = models.CharField(_("last name"), max_length=150)
+    avatar = models.ImageField(upload_to='avatars', blank=True,
+                               default='avatars/default_avatar.jpg')
+    is_active = models.BooleanField(
+        _("active"),
+        default=False,
+        help_text=_(
+            "Designates whether this user should be treated as active. "
+            "Unselect this instead of deleting accounts."
+        ),
+    )
+    is_seller = models.BooleanField(
+        _("seller"),
+        default=False,
+        help_text=_(
+            "If selected it user is approved seller. "
+            "Unselect this if you want block seller."
+        ),
+    )
+    is_seller_pending = models.BooleanField(
+        _("seller pending"),
+        default=False,
+        help_text=_("Indicates whether the user's seller application is pending approval."
+                    "If True means pending, if False means not pending."
+                    ),
+    )
 
-    objects = MyManager()
-
+    objects = UserManager()
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
     def __str__(self):
-        return self.email
+        return f'{self.email}'
 
     def create_activation_code(self):
         code = str(uuid4())
         self.activation_code = code
 
 
-class SellerUser(CustomUser):
-    address = models.CharField(_("address"), max_length=265)
-    store_name = models.CharField(_("name"), max_length=123)
-    phone_number = models.CharField(max_length=20, unique=True)
-    inn = models.PositiveSmallIntegerField()
+class UserProfile(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    # saved_products = models.ManyToManyField(Product, blank=True, related_name='saved_by')
+    birthdate = models.DateField(null=True, blank=True)
+    address = models.CharField(max_length=255, blank=True)
+    phone_number = models.CharField(max_length=20, blank=True)
 
-    def save(self, *args, **kwargs):
-        # При сохранении пользователя, проверяем и форматируем номер телефона
-        try:
-            parsed_number = phonenumbers.parse(self.phone_number, None)
-            if not phonenumbers.is_valid_number(parsed_number):
-                raise ValueError("Invalid phone number")
-            self.phone_number = phonenumbers.format_number(parsed_number, phonenumbers.PhoneNumberFormat.E164)
-        except phonenumbers.NumberParseException:
-            raise ValueError("Invalid phone number")
 
-        super().save(*args, **kwargs)
+class SellerProfile(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    store_name = models.CharField(max_length=255)
+    description = models.TextField()
+    website = models.URLField(blank=True, null=True)
+    social_media = models.CharField(max_length=255, blank=True, null=True)
+    country = models.CharField(max_length=150, blank=True, null=True)
+    city = models.CharField(max_length=150, blank=True, null=True)
+    # Taxpayer Identification Number (ИНН)
+    tin = models.PositiveBigIntegerField(
+        validators=[
+            MaxValueValidator(999999999999),  # Максимальное значение на 12 цифр
+            MinValueValidator(100000000000)  # Минимальное значение на 12 цифр
+        ]
+    )
+    checking_account = models.PositiveBigIntegerField(
+        validators=[
+            MaxValueValidator(99999999999999999999),  # Максимальное значение на 20 цифр
+            MinValueValidator(10000000000000000000)  # Минимальное значение на 20 цифр
+        ]
+    )
+    bank_identification_code = models.PositiveBigIntegerField(
+        validators=[
+            MaxValueValidator(999999999),  # Максимальное значение на 9 цифр
+            MinValueValidator(100000000)  # Минимальное значение на 9 цифр
+        ]
+    )
+    tax_registration_reason_code = models.PositiveBigIntegerField(
+        validators=[
+            MaxValueValidator(999999999),  # Максимальное значение на 9 цифр
+            MinValueValidator(100000000)  # Минимальное значение на 9 цифр
+        ]
+    )
 
+
+@receiver(reset_password_token_created)
+@permission_classes([AllowAny, ])
+def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
+    email_plaintext_message = "{}{}".format(reverse('password_reset:reset-password-request'),
+                                            reset_password_token.key)
+    # ?token=
+    link = f'http://{HOST}{email_plaintext_message}'
+
+    send_mail(
+        # title:
+        "Восстановление пароля для {title}".format(title="Mordo"),
+        # message:
+        f'Здравствуйте, восстановите ваш пароль!\nЧтобы восстановить ваш пароль нужно перейти по ссылке ниже:\n'
+        f'\n{link}',
+        # from:
+        "noreply@somehost.local",
+        # to:
+        [reset_password_token.user.email],
+    )

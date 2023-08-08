@@ -1,14 +1,20 @@
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from . import views
+from rest_framework.routers import SimpleRouter
+from account.views import UserViewSet
 
-from account import views
-from account.views import AccountViewSet
 
-router = DefaultRouter()
-router.register('', AccountViewSet)
+router = SimpleRouter()
+router.register('', UserViewSet)
 
 urlpatterns = [
+    path('login/', views.LoginView.as_view()),
+    path('refresh/', views.RefreshView.as_view()),
     path('', include(router.urls)),
-    path('refresh/', views.Refresh.as_view()),
-    path('login/', views.Login.as_view())
+    path('<int:pk>/', views.UserUpdateViewSet.as_view({'patch': 'update'})),
+    path('change-password/', views.ChangePasswordView.as_view()),
+    path('password_reset/', include('django_rest_passwordreset.urls', namespace='password_reset')),
+    path('approve-seller/<int:pk>/', views.ApproveSellerView.as_view()),
+    path('seller-reg/', views.SellerApplicationView.as_view())
 ]
+
