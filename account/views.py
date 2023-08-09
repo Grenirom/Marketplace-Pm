@@ -16,7 +16,7 @@ from django.contrib.auth.models import User
 from .permissions import IsAuthorOrAdmin
 # from product.permissions import IsAuthor
 # from product.serializers import FavoriteListSerializer
-from .serializers import ChangePasswordSerializer, UserUpdateSerializer
+from .serializers import ChangePasswordSerializer, UserUpdateSerializer, SellerProfileSerializer
 from rest_framework.permissions import IsAuthenticated
 
 from account import serializers
@@ -66,7 +66,7 @@ class UserViewSet(ListModelMixin, GenericViewSet):
 
 
 class SellerApplicationView(APIView):
-    permission_classes = [permissions.IsAuthenticated, ]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         user = request.user
@@ -76,6 +76,24 @@ class SellerApplicationView(APIView):
 
         user.is_seller_pending = True
         user.save()
+
+        # Create a SellerProfile instance
+        seller_data = {
+            "user": user,
+            "store_name": "",
+            "description": "",
+            "website": "",
+            "social_media": "",
+            "country": "",
+            "city": "",
+            "tin": 0,
+            "checking_account": 0,
+            "bank_identification_code": 0,
+            "tax_registration_reason_code": 0
+        }
+        serializer = SellerProfileSerializer(data=seller_data)
+        if serializer.is_valid():
+            serializer.save()
 
         return Response({"message": "Your seller application has been submitted."},
                         status=status.HTTP_200_OK)

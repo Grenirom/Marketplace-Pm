@@ -3,7 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from account.models import CustomUser
+from account.models import CustomUser, SellerProfile
 
 # import logging
 #
@@ -49,7 +49,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        exclude = ('password', )
+        exclude = ('password',)
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -60,3 +60,9 @@ class ChangePasswordSerializer(serializers.Serializer):
     """
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
+
+
+class SellerProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SellerProfile
+        fields = '__all__'
