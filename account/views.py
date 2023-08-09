@@ -1,6 +1,4 @@
 from django.contrib.auth import get_user_model
-from django.urls import path
-from django.views.decorators.cache import cache_page
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
@@ -9,21 +7,16 @@ from rest_framework.mixins import ListModelMixin, UpdateModelMixin
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework import generics, permissions
 from rest_framework.response import Response
-
 from rest_framework import status
 from django.contrib.auth.models import User
-
 from .models import SellerProfile
 from .permissions import IsAuthorOrAdmin
-# from product.permissions import IsAuthor
-# from product.serializers import FavoriteListSerializer
-from .serializers import ChangePasswordSerializer, UserUpdateSerializer
+from .serializers import ChangePasswordSerializer
 from rest_framework.permissions import IsAuthenticated
-
 from account import serializers
 from account.send_mail import send_confirmation_email
-
-# from favorite.serializers import FavoriteUserSerializer
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 User = get_user_model()
 
@@ -73,33 +66,12 @@ class Refresh(TokenRefreshView):
     #     serializer = FavoriteListSerializer(instance=favorites, many=True)
     #     return Response(serializer.data, status=200)
 
-#
-# class SellerApplicationView(APIView):
-#
-#     permission_classes = [permissions.IsAuthenticated, ]
-#     serializer = serializers.SellerSerializer
-#
-#     def post(self, request):
-#         user = request.user
-#         if user.is_seller_pending:
-#             return Response({"message": "Your seller application is already pending."},
-#                             status=status.HTTP_400_BAD_REQUEST)
-#
-#         user.is_seller_pending = True
-#         user.save()
-#
-#         return Response({"message": "Your seller application has been submitted."},
-#                         status=status.HTTP_200_OK)
 
+class SellerApplicationView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
-class SellerApplicationView(generics.CreateAPIView):
-    queryset = SellerProfile.objects.all()
-    serializer_class = serializers.SellerSerializer
-    permission_classes = [IsAuthenticated, ]
-
-    def perform_create(self, serializer):
-        user = self.request.user
-
+    def post(self, request):
+        user = request.user
         if user.is_seller_pending:
             return Response({"message": "Your seller application is already pending."},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -107,7 +79,25 @@ class SellerApplicationView(generics.CreateAPIView):
         user.is_seller_pending = True
         user.save()
 
-        serializer.save(user=user)
+        # Create a SellerProfile instance
+        seller_data = {
+            "user": user,
+            "store_name": request.data.get("store_name", ""),
+            "description": request.data.get("description", ""),
+            "website": request.data.get("website", ""),
+            "social_media": request.data.get("social_media", ""),
+            "country": request.data.get("country", ""),
+            "city": request.data.get("city", ""),
+            "tin": request.data.get("tin", ""),
+            "checking_account": request.data.get("checking_account", ""),
+            "bank_identification_code": request.data.get("bank_identification_code", ""),
+            "tax_registration_reason_code": request.data.get("tax_registration_reason_code", "")
+        }
+
+        serializer = serializers.SellerSerializer(data=seller_data)
+        print(seller_data, '************************* THIS IS A SELLER DATA')
+        if serializer.is_valid():
+            serializer.save()
 
         return Response({"message": "Your seller application has been submitted."},
                         status=status.HTTP_200_OK)
@@ -131,32 +121,15 @@ class ApproveSellerView(APIView):
         user.is_seller = True
         user.save()
 
-        # Создаем запись в модели SellerProfile при одобрении пользователя
-        SellerProfile.objects.create(user=user, store_name="", description="")
-
-        return Response({"message": "Seller approved."},
-                        status=status.HTTP_200_OK)
-
-# class ApproveSellerView(APIView):
-#     permission_classes = [permissions.IsAdminUser, ]
-#
-#     def post(self, request, pk):
-#         try:
-#             user = User.objects.get(pk=pk)
-#         except User.DoesNotExist:
-#             return Response({"message": "User not found."},
-#                             status=status.HTTP_404_NOT_FOUND)
-#
-#         if not user.is_seller_pending:
-#             return Response({"message": "User's seller application is not pending approval."},
-#                             status=status.HTTP_400_BAD_REQUEST)
-#
-#         user.is_seller_pending = False
-#         user.is_seller = True
-#         user.save()
-#
-#         return Response({"message": "Seller approved."},
-#                         status=status.HTTP_200_OK)
+        # Используем данные из запроса и создаем запись в модели SellerProfile
+        serializer = serializers.SellerSerializer(data=request.data)
+        print(request.data, '!!!!!!!!!!!!!!!!!!!!')
+        if serializer.is_valid():
+            serializer.save(user=user)
+            return Response({"message": "Seller approved and SellerProfile created."},
+                            status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserUpdateViewSet(UpdateModelMixin, GenericViewSet):
