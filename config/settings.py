@@ -1,6 +1,8 @@
+import os
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -31,11 +33,12 @@ INSTALLED_APPS = [
 
     # my_apps
     'account',
-
+    'category',
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -118,7 +121,7 @@ EMAIL_HOST_PASSWORD = config('EMAIL_PASSWORD')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# AUTH_USER_MODEL =
+AUTH_USER_MODEL = 'account.CustomUser'
 
 # SWAGGER_SETTINGS = {
 #     'SECURITY_DEFINITIONS': {
@@ -181,13 +184,90 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
 ]
 
-# REDIS_HOST = config('REDIS_HOST')
-# REDIS_PORT = '6379'
+REDIS_HOST = config('REDIS_HOST')
+REDIS_PORT = '6379'
 #
-# CELERY_BROKER_URL = 'redis://' + REDIS_HOST + ':' + REDIS_PORT + '/0'
-# CELERY_BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 3600}
-# CELERY_RESULT_BACKEND = 'redis://' + REDIS_HOST + ':' + REDIS_PORT + '/0'
-#
-# CELERY_ACCEPT_CONTENT = ['application/json']
-# CELERY_TASK_SERIALIZER = 'json'
-# CELERY_RESULT_SERIALIZER = 'json'
+CELERY_BROKER_URL = 'redis://' + REDIS_HOST + ':' + REDIS_PORT + '/0'
+CELERY_BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 3600}
+CELERY_RESULT_BACKEND = 'redis://' + REDIS_HOST + ':' + REDIS_PORT + '/0'
+#                                  redis://127.0.0.1:6379/0
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+
+# CELERY_BEAT_SCHEDULE = {
+#     'parse_news_task': {
+#         'task': 'news.tasks.parse_news', # Вместо news.tasks.parse_news - добавьте свой task
+#         'schedule': crontab(minute='*/2'),  # Запуск каждые 2 часа
+#     },
+# }
+
+
+ENABLE_DECORATOR_LOGGING = os.getenv('ENABLE_DECORATOR_LOGGING', True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'default': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs/main.log'),
+            'maxBytes': 1024 * 1024 * 5,  # 5 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+        'request_handler': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs/django_request.log'),
+            'maxBytes': 1024 * 1024 * 5,  # 5 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['default'],
+            'level': 'DEBUG',
+            'propagate': True
+        },
+        'django.request': {  # Stop SQL debug from logging to main logger
+            'handlers': ['request_handler'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+    },
+}
+
+# redis-cli - команда для запуска Radis
+# redis-server
+# celery -A config worker -l INFO - запуск Celery
+
+#  1  git clone https://<репозиторий>
+#  2  cd <dir project>
+#  3  nano .env
+#  4  sudo apt-get update
+#  5  sudo apt install docker.io
+#  6  sudo apt install docker-compose
+#  7  sudo service docker start
+#  8  sudo docker-compose up -d --build
+#  9  sudo docker-compose start
+# 10  sudo docker-compose up -d
+# 11  sudo docker-compose exec web bash
+# После 11 команды попадаем в контейнер Docker
+# 12 python3 manage.py collectstatic
+# 13 python3 manage.py createsuperuser
