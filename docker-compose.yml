@@ -1,0 +1,70 @@
+version: '3.3'
+
+services:
+  web:
+    build: .
+    command: >
+      sh -c "gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+    volumes:
+      - .:/usr/src/app/
+      - static_volume:/usr/src/app/static
+      - media_volume:/usr/src/app/media
+      - logs_volume:/usr/src/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+      - migration
+
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: orda_db
+      POSTGRES_USER: ngrebnev17
+      POSTGRES_PASSWORD: 1
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+
+  migration:
+    build: .
+    command: >
+      sh -c "python manage.py makemigrations &&
+             python manage.py migrate"
+    volumes:
+      - .:/usr/src/app/
+    depends_on:
+      - db
+
+
+  redis:
+    image: redis
+
+  celery:
+    build: .
+    command: celery -A config worker -l INFO
+    volumes:
+      - .:/usr/src/app/
+    depends_on:
+      - web
+      - redis
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    ports:
+      - "80:80"
+    volumes:
+      - static_volume:/usr/src/app/static
+      - media_volume:/usr/src/app/media
+    depends_on:
+      - web
+
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
+  logs_volume:
