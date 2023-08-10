@@ -1,6 +1,6 @@
 from uuid import uuid4
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import MinLengthValidator, MaxLengthValidator
+from django.core.validators import RegexValidator, MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.dispatch import receiver
@@ -60,30 +60,42 @@ class CustomUser(AbstractUser):
         self.activation_code = code
 
 
-class UserProfile(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
-    # saved_products = models.ManyToManyField(Product, blank=True, related_name='saved_by')
-    birthdate = models.DateField(null=True, blank=True)
-    address = models.CharField(max_length=255, blank=True)
-    phone_number = models.CharField(max_length=20, blank=True)
-
-
 class SellerProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     store_name = models.CharField(max_length=255)
     description = models.TextField()
     website = models.URLField(blank=True, null=True)
-    social_media = models.URLField(blank=True, null=True)
-    country = models.CharField(max_length=100, blank=False)
-    city = models.CharField(max_length=100)
-    tin = models.CharField(max_length=12, validators=[MinLengthValidator(12), MaxLengthValidator(12)])
-    checking_account = models.CharField(max_length=20, validators=[MinLengthValidator(20), MaxLengthValidator(20)])
-    bank_identification_code = models.CharField(max_length=9, validators=[MinLengthValidator(9), MaxLengthValidator(9)])
-    tax_registration_reason_code = models.CharField(max_length=9,
-                                                    validators=[MinLengthValidator(9), MaxLengthValidator(9)])
+    social_media = models.CharField(max_length=255, blank=True, null=True)
+    country = models.CharField(max_length=150, blank=True, null=True)
+    city = models.CharField(max_length=150, blank=True, null=True)
+    # Taxpayer Identification Number (ИНН)
+    tin = models.PositiveBigIntegerField(
+        validators=[
+            RegexValidator(r'^\d{12}$', 'Enter a valid 12-digit number.')
+        ]
+    )
+    checking_account = models.DecimalField(
+        max_digits=20, decimal_places=0,
+        validators=[
+            MaxValueValidator(99999999999999999999),  # Максимальное значение на 20 цифр
+            MinValueValidator(10000000000000000000)  # Минимальное значение на 20 цифр
+        ]
+    )
+    bank_identification_code = models.PositiveBigIntegerField(
+        validators=[
+            RegexValidator(r'^\d{9}$', 'Enter a valid 9-digit number.')
+        ]
+    )
+    tax_registration_reason_code = models.PositiveBigIntegerField(
+        validators=[
+            RegexValidator(r'^\d{9}$', 'Enter a valid 9-digit number.')
+        ]
+    )
 
     def __str__(self):
         return self.store_name
+
+
 @receiver(reset_password_token_created)
 @permission_classes([AllowAny, ])
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):

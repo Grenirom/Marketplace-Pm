@@ -3,20 +3,20 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
-from rest_framework.mixins import ListModelMixin, UpdateModelMixin
+from rest_framework.mixins import ListModelMixin
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth.models import User
+
+from config.tasks import send_confirmation_email_task
 from .models import SellerProfile
 from .permissions import IsAuthorOrAdmin
 from .serializers import ChangePasswordSerializer
 from rest_framework.permissions import IsAuthenticated
 from account import serializers
-from account.send_mail import send_confirmation_email
-from django.db.models.signals import post_save
-from django.dispatch import receiver
+
 
 User = get_user_model()
 
@@ -33,7 +33,7 @@ class UserViewSet(ListModelMixin, GenericViewSet):
         user = serializer.save()
         if user:
             try:
-                send_confirmation_email(user.email, user.activation_code)
+                send_confirmation_email_task.delay(user.email, user.activation_code)
             except Exception as e:
                 return Response({'msg': 'Registered, but troubles with email!',
                                  'data': serializer.data}, status=201)
@@ -58,20 +58,36 @@ class Login(TokenObtainPairView):
 class Refresh(TokenRefreshView):
     permission_classes = (permissions.AllowAny, )
 
-    # @cache_page(60 * 15)
-    # @action(['GET'], detail=True)
-    # def favorites(self, request, pk):
-    #     product = self.get_object()
-    #     favorites = product.favorites.filter(favorite=True)
-    #     serializer = FavoriteListSerializer(instance=favorites, many=True)
-    #     return Response(serializer.data, status=200)
+
+class UserProfileViewSet(viewsets.ModelViewSet):
+    serializer_class = serializers.UserSerializer
+    permission_classes = [IsAuthorOrAdmin,]
+
+    def get_queryset(self):
+        return User.objects.filter(pk=self.request.user.pk)  # Фильтруем по текущему пользователю
+
+    @action(detail=False, methods=['GET'])
+    def my_profile(self, request):
+        profile = self.get_queryset().first()
+        serializer = self.get_serializer(profile)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['PUT', 'PATCH'])
+    def update_my_profile(self, request):
+        profile = self.get_queryset().first()
+        serializer = self.get_serializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
-class SellerApplicationView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+class SellerProfileCreateView(generics.CreateAPIView):
+    queryset = SellerProfile.objects.all()
+    serializer_class = serializers.SellerSerializer
+    permission_classes = [permissions.IsAuthenticated, ]
 
-    def post(self, request):
-        user = request.user
+    def perform_create(self, serializer):
+        user = self.request.user
         if user.is_seller_pending:
             return Response({"message": "Your seller application is already pending."},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -79,28 +95,26 @@ class SellerApplicationView(APIView):
         user.is_seller_pending = True
         user.save()
 
-        # Create a SellerProfile instance
-        seller_data = {
-            "user": user,
-            "store_name": request.data.get("store_name", ""),
-            "description": request.data.get("description", ""),
-            "website": request.data.get("website", ""),
-            "social_media": request.data.get("social_media", ""),
-            "country": request.data.get("country", ""),
-            "city": request.data.get("city", ""),
-            "tin": request.data.get("tin", ""),
-            "checking_account": request.data.get("checking_account", ""),
-            "bank_identification_code": request.data.get("bank_identification_code", ""),
-            "tax_registration_reason_code": request.data.get("tax_registration_reason_code", "")
-        }
+        serializer.save(user=user)
 
-        serializer = serializers.SellerSerializer(data=seller_data)
-        print(seller_data, '************************* THIS IS A SELLER DATA')
-        if serializer.is_valid():
-            serializer.save()
 
-        return Response({"message": "Your seller application has been submitted."},
-                        status=status.HTTP_200_OK)
+class SellerProfileViewSet(viewsets.ModelViewSet):
+    queryset = SellerProfile.objects.all()
+    serializer_class = serializers.SellerSerializer
+    permission_classes = [IsAuthorOrAdmin, ]
+
+    def list(self, request):
+        profile = self.queryset.get(user=request.user)
+        serializer = self.get_serializer(profile)
+        return Response(serializer.data)
+    
+    @action(['PUT', 'PATCH'], detail=True)
+    def update_profile(self, request, pk=None):
+        profile = self.queryset.get(user=request.user)
+        serializer = self.get_serializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 class ApproveSellerView(APIView):
@@ -114,28 +128,13 @@ class ApproveSellerView(APIView):
                             status=status.HTTP_404_NOT_FOUND)
 
         if not user.is_seller_pending:
-            return Response({"message": "User's seller application is not pending approval."},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Application was not found!"}, status=status.HTTP_400_BAD_REQUEST)
 
         user.is_seller_pending = False
         user.is_seller = True
         user.save()
 
-        # Используем данные из запроса и создаем запись в модели SellerProfile
-        serializer = serializers.SellerSerializer(data=request.data)
-        print(request.data, '!!!!!!!!!!!!!!!!!!!!')
-        if serializer.is_valid():
-            serializer.save(user=user)
-            return Response({"message": "Seller approved and SellerProfile created."},
-                            status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class UserUpdateViewSet(UpdateModelMixin, GenericViewSet):
-    queryset = User.objects.all()
-    serializer_class = serializers.UserUpdateSerializer
-    permission_classes = (IsAuthorOrAdmin,)
+        return Response({"message": "Seller approved."}, status=status.HTTP_200_OK)
 
 
 class LoginView(TokenObtainPairView):

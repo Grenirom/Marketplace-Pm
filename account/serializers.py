@@ -37,16 +37,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
-class UserUpdateSerializer(serializers.ModelSerializer):
-    first_name = serializers.CharField(required=False)
-    last_name = serializers.CharField(required=False)
-    email = serializers.CharField(required=False)
-
-    class Meta:
-        model = User
-        exclude = ('password', )
-
-
 class ChangePasswordSerializer(serializers.Serializer):
     model = User
 
@@ -58,7 +48,15 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 
 class SellerSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
     class Meta:
         model = models.SellerProfile
         fields = '__all__'
 
+
+class SellerProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.SellerProfile
+        fields = ('store_name', 'description', 'website', 'social_media', 'country', 'city', 'tin', 'checking_account',
+                  'bank_identification_code', 'tax_registration_reason_code')
