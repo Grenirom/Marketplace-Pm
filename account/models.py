@@ -1,7 +1,7 @@
 from uuid import uuid4
 
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.dispatch import receiver
@@ -80,11 +80,11 @@ class SellerProfile(models.Model):
     # Taxpayer Identification Number (ИНН)
     tin = models.PositiveBigIntegerField(
         validators=[
-            MaxValueValidator(999999999999),  # Максимальное значение на 12 цифр
-            MinValueValidator(100000000000)  # Минимальное значение на 12 цифр
+            RegexValidator(r'^\d{12}$', 'Enter a valid 12-digit number.')
         ]
     )
-    checking_account = models.PositiveBigIntegerField(
+    checking_account = models.DecimalField(
+        max_digits=20, decimal_places=0,
         validators=[
             MaxValueValidator(99999999999999999999),  # Максимальное значение на 20 цифр
             MinValueValidator(10000000000000000000)  # Минимальное значение на 20 цифр
@@ -92,14 +92,12 @@ class SellerProfile(models.Model):
     )
     bank_identification_code = models.PositiveBigIntegerField(
         validators=[
-            MaxValueValidator(999999999),  # Максимальное значение на 9 цифр
-            MinValueValidator(100000000)  # Минимальное значение на 9 цифр
+            RegexValidator(r'^\d{9}$', 'Enter a valid 9-digit number.')
         ]
     )
     tax_registration_reason_code = models.PositiveBigIntegerField(
         validators=[
-            MaxValueValidator(999999999),  # Максимальное значение на 9 цифр
-            MinValueValidator(100000000)  # Минимальное значение на 9 цифр
+            RegexValidator(r'^\d{9}$', 'Enter a valid 9-digit number.')
         ]
     )
 

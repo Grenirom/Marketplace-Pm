@@ -2,20 +2,15 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.models import User
 from rest_framework import serializers
-
-from account.models import CustomUser, SellerProfile
-
-# import logging
-#
-# logger = logging.getLogger('main')
+from . import models
 
 User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CustomUser
-        fields = ('id', 'email', 'first_name', 'last_name')
+        model = User
+        exclude = ('password', )
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -33,23 +28,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         password = attrs['password']
         password2 = attrs.pop('password2')
         if password2 != password:
-            raise serializers.ValidationError('Passwords didn\'t match!')
+            raise serializers.ValidationError("The passwords didn't match!")
         validate_password(password)
         return attrs
 
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         return user
-
-
-class UserUpdateSerializer(serializers.ModelSerializer):
-    first_name = serializers.CharField(required=False)
-    last_name = serializers.CharField(required=False)
-    email = serializers.CharField(required=False)
-
-    class Meta:
-        model = User
-        exclude = ('password',)
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -62,7 +47,16 @@ class ChangePasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(required=True)
 
 
-class SellerProfileSerializer(serializers.ModelSerializer):
+class SellerSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
     class Meta:
-        model = SellerProfile
+        model = models.SellerProfile
         fields = '__all__'
+
+
+class SellerProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.SellerProfile
+        fields = ('store_name', 'description', 'website', 'social_media', 'country', 'city', 'tin', 'checking_account',
+                  'bank_identification_code', 'tax_registration_reason_code')
