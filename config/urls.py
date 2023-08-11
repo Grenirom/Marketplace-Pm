@@ -9,7 +9,7 @@ from drf_yasg import openapi
 
 schema_view = get_schema_view(
    openapi.Info(
-      title="Sell Swap",
+      title="Mordo",
       default_version='v1',
       description="Test restful API",
       terms_of_service="https://www.google.com/policies/terms/",
@@ -28,6 +28,8 @@ urlpatterns = [
     re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('accounts/', include('account.urls')),
     path('categories/', include('category.urls')),
+    path('products/', include('product.urls')),
+    path('rating/', include('rating.urls')),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
