@@ -38,6 +38,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class ChangePasswordSerializer(serializers.Serializer):
+    model = User
+
+    """
+    Serializer for password change endpoint.
+    """
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
 
@@ -70,4 +75,5 @@ class SellerAdminListSerializer(serializers.ModelSerializer):
 class SellerAdminDetailSerializers(serializers.ModelSerializer):
     class Meta:
         model = User
-        exclude = ('password', )
+        exclude = ('password', 'bank_identification_code', 'tax_registration_reason_code')
+

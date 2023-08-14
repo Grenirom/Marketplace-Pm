@@ -25,11 +25,6 @@ class Category(models.Model):
         verbose_name_plural = 'categories'
 
 
-class CategoryPhoto(models.Model):
-    category = models.ForeignKey(Category, related_name='photos', on_delete=models.CASCADE)
-    photo_desc = models.ImageField(upload_to='images/')
-
-
 @receiver(pre_save, sender=Category)
 def category_slug_save(sender, instance, *args, **kwargs):
     # print('***************************************')

@@ -30,4 +30,3 @@ urlpatterns = [
     path('approve-seller/<int:pk>/', views.ApproveSellerView.as_view()),
     path('seller-reg/', views.SellerProfileCreateView.as_view()),
 ]
-

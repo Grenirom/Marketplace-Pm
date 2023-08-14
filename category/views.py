@@ -2,18 +2,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from rest_framework import generics, permissions
 from . import serializers
-from .models import Category, CategoryPhoto
-from .serializers import CategoryPhotoSerializer
-
-
-class CategoryPhotoListCreateView(generics.ListCreateAPIView):
-    queryset = CategoryPhoto.objects.all()
-    serializer_class = CategoryPhotoSerializer
-
-
-class CategoryPhotoDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = CategoryPhoto.objects.all()
-    serializer_class = CategoryPhotoSerializer
+from .models import Category
 
 
 class CategoryCreateListView(generics.ListCreateAPIView):

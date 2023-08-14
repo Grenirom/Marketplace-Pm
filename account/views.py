@@ -14,20 +14,20 @@ from django.contrib.auth.models import User
 from config.tasks import send_confirmation_email_task
 from .models import SellerProfile
 from .permissions import IsAuthorOrAdmin
-from .serializers import UserSerializer, RegisterSerializer, SellerSerializer, SellerAdminListSerializer, \
-    SellerAdminDetailSerializers, SellerProfileUpdateSerializer
+from account import serializers
+
 
 User = get_user_model()
 
 
 class UserViewSet(ListModelMixin, GenericViewSet):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = serializers.UserSerializer
     permission_classes = (AllowAny,)
 
     @action(['POST'], detail=False)
     def register(self, request, *args, **kwargs):
-        serializer = RegisterSerializer(data=request.data)
+        serializer = serializers.RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         if user:
@@ -59,8 +59,8 @@ class Refresh(TokenRefreshView):
 
 
 class UserProfileViewSet(viewsets.ModelViewSet):
-    serializer_class = UserSerializer
-    permission_classes = [IsAuthorOrAdmin,]
+    serializer_class = serializers.UserSerializer
+    permission_classes = [IsAuthorOrAdmin, ]
 
     def get_queryset(self):
         return User.objects.filter(pk=self.request.user.pk)  # Фильтруем по текущему пользователю
@@ -82,7 +82,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
 class SellerProfileCreateView(generics.CreateAPIView):
     queryset = SellerProfile.objects.all()
-    serializer_class = SellerSerializer
+    serializer_class = serializers.SellerSerializer
     permission_classes = [permissions.IsAuthenticated, ]
 
     def perform_create(self, serializer):
@@ -99,7 +99,7 @@ class SellerProfileCreateView(generics.CreateAPIView):
 
 class SellerProfileViewSet(viewsets.ModelViewSet):
     queryset = SellerProfile.objects.all()
-    serializer_class = SellerSerializer
+    serializer_class = serializers.SellerSerializer
     permission_classes = [IsAuthorOrAdmin, ]
 
     def list(self, request):
@@ -109,7 +109,7 @@ class SellerProfileViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         return Response({"detail": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-    
+
     @action(['PUT', 'PATCH'], detail=True)
     def update_profile(self, request, pk=None):
         profile = self.queryset.get(user=request.user)
@@ -139,23 +139,15 @@ class ApproveSellerView(APIView):
         return Response({"message": "Seller approved."}, status=status.HTTP_200_OK)
 
 
-class LoginView(TokenObtainPairView):
-    permission_classes = (AllowAny,)
-
-
-class RefreshView(TokenRefreshView):
-    permission_classes = (AllowAny,)
-
-
 class SellerAllView(viewsets.ModelViewSet):
     queryset = User.objects.filter(is_seller_pending=True)
     permission_classes = [permissions.IsAdminUser]
 
     def get_serializer_class(self):
         if self.action == 'list':
-            return SellerAdminListSerializer
+            return serializers.SellerAdminListSerializer
         elif self.action == 'retrieve':
-            return SellerProfileUpdateSerializer
+            return serializers.SellerProfileUpdateSerializer
         else:
             raise serializers.ValidationError({"detail": "Method not allowed"})
 

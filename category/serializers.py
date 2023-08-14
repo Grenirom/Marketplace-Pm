@@ -1,20 +1,13 @@
 from rest_framework import serializers
-from .models import Category, CategoryPhoto
-
-
-class CategoryPhotoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CategoryPhoto
-        fields = ['id', 'photo_desc']
+from .models import Category
 
 
 class CategorySerializer(serializers.ModelSerializer):
     slug = serializers.SlugField(required=False)
-    photos_desc = CategoryPhotoSerializer(many=True, read_only=True)
 
     class Meta:
         model = Category
-        fields = ['slug', 'name', 'photo', 'description', 'parent', 'photos_desc']
+        fields = ['slug', 'name', 'photo', 'description', 'parent']
 
     # def to_representation(self, instance):
     #     repr = super().to_representation(instance)
