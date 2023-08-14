@@ -102,6 +102,9 @@ class SellerProfileViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.SellerSerializer
     permission_classes = [IsAuthorOrAdmin, ]
 
+    def create(self, request, *args, **kwargs):
+        return Response({"detail": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
     def list(self, request):
         profile = self.queryset.get(user=request.user)
         serializer = self.get_serializer(profile)
