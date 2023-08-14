@@ -50,11 +50,11 @@ class UserViewSet(ListModelMixin, GenericViewSet):
         return Response({'msg': 'Successfully activated your account!'}, status=200)
 
 
-class Login(TokenObtainPairView):
+class LoginView(TokenObtainPairView):
     permission_classes = (permissions.AllowAny, )
 
 
-class Refresh(TokenRefreshView):
+class RefreshView(TokenRefreshView):
     permission_classes = (permissions.AllowAny, )
 
 
