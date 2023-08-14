@@ -38,13 +38,12 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class ChangePasswordSerializer(serializers.Serializer):
-    model = User
-
-    """
-    Serializer for password change endpoint.
-    """
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
+
+
+class ResetPasswordEmailSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
 
 
 class SellerSerializer(serializers.ModelSerializer):
@@ -60,3 +59,15 @@ class SellerProfileUpdateSerializer(serializers.ModelSerializer):
         model = models.SellerProfile
         fields = ('store_name', 'description', 'website', 'social_media', 'country', 'city', 'tin', 'checking_account',
                   'bank_identification_code', 'tax_registration_reason_code')
+
+
+class SellerAdminListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('email', )
+
+
+class SellerAdminDetailSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        exclude = ('password', )

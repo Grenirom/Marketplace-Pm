@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
@@ -13,22 +14,20 @@ from django.contrib.auth.models import User
 from config.tasks import send_confirmation_email_task
 from .models import SellerProfile
 from .permissions import IsAuthorOrAdmin
-from .serializers import ChangePasswordSerializer
-from rest_framework.permissions import IsAuthenticated
-from account import serializers
-
+from .serializers import UserSerializer, RegisterSerializer, SellerSerializer, SellerAdminListSerializer, \
+    SellerAdminDetailSerializers, SellerProfileUpdateSerializer
 
 User = get_user_model()
 
 
 class UserViewSet(ListModelMixin, GenericViewSet):
     queryset = User.objects.all()
-    serializer_class = serializers.UserSerializer
+    serializer_class = UserSerializer
     permission_classes = (AllowAny,)
 
     @action(['POST'], detail=False)
     def register(self, request, *args, **kwargs):
-        serializer = serializers.RegisterSerializer(data=request.data)
+        serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         if user:
@@ -60,7 +59,7 @@ class Refresh(TokenRefreshView):
 
 
 class UserProfileViewSet(viewsets.ModelViewSet):
-    serializer_class = serializers.UserSerializer
+    serializer_class = UserSerializer
     permission_classes = [IsAuthorOrAdmin,]
 
     def get_queryset(self):
@@ -83,7 +82,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
 class SellerProfileCreateView(generics.CreateAPIView):
     queryset = SellerProfile.objects.all()
-    serializer_class = serializers.SellerSerializer
+    serializer_class = SellerSerializer
     permission_classes = [permissions.IsAuthenticated, ]
 
     def perform_create(self, serializer):
@@ -100,13 +99,16 @@ class SellerProfileCreateView(generics.CreateAPIView):
 
 class SellerProfileViewSet(viewsets.ModelViewSet):
     queryset = SellerProfile.objects.all()
-    serializer_class = serializers.SellerSerializer
+    serializer_class = SellerSerializer
     permission_classes = [IsAuthorOrAdmin, ]
 
     def list(self, request):
         profile = self.queryset.get(user=request.user)
         serializer = self.get_serializer(profile)
         return Response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        return Response({"detail": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
     
     @action(['PUT', 'PATCH'], detail=True)
     def update_profile(self, request, pk=None):
@@ -145,36 +147,29 @@ class RefreshView(TokenRefreshView):
     permission_classes = (AllowAny,)
 
 
-class ChangePasswordView(generics.UpdateAPIView):
-    """
-    An endpoint for changing password.
-    """
-    serializer_class = ChangePasswordSerializer
-    model = User
-    permission_classes = (IsAuthenticated,)
+class SellerAllView(viewsets.ModelViewSet):
+    queryset = User.objects.filter(is_seller_pending=True)
+    permission_classes = [permissions.IsAdminUser]
 
-    def get_object(self, queryset=None):
-        obj = self.request.user
-        return obj
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return SellerAdminListSerializer
+        elif self.action == 'retrieve':
+            return SellerProfileUpdateSerializer
+        else:
+            raise serializers.ValidationError({"detail": "Method not allowed"})
 
-    def update(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        serializer = self.get_serializer(data=request.data)
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())  # Применяем фильтры
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
-        if serializer.is_valid():
-            # Check old password
-            if not self.object.check_password(serializer.data.get("old_password")):
-                return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
-            # set_password also hashes the password that the user will get
-            self.object.set_password(serializer.data.get("new_password"))
-            self.object.save()
-            response = {
-                'status': 'success',
-                'code': status.HTTP_200_OK,
-                'message': 'Password updated successfully',
-                'data': []
-            }
+    def retrieve(self, request, *args, **kwargs):
+        user_instance = self.get_object()
 
-            return Response(response)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            seller_profile_instance = SellerProfile.objects.get(user=user_instance)
+            serializer = self.get_serializer(seller_profile_instance)
+            return Response(serializer.data)
+        except SellerProfile.DoesNotExist:
+            return Response({"detail": "Profile does not exist"}, status=status.HTTP_404_NOT_FOUND)

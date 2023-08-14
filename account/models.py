@@ -97,7 +97,6 @@ class SellerProfile(models.Model):
 
 
 @receiver(reset_password_token_created)
-@permission_classes([AllowAny, ])
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
     email_plaintext_message = "{}{}".format(reverse('password_reset:reset-password-request'),
                                             reset_password_token.key)
@@ -108,7 +107,8 @@ def password_reset_token_created(sender, instance, reset_password_token, *args, 
         # title:
         "Восстановление пароля для {title}".format(title="Mordo"),
         # message:
-        f'Здравствуйте, восстановите ваш пароль!\nЧтобы восстановить ваш пароль нужно перейти по ссылке ниже:\n'
+        f'Здравствуйте, восстановите ваш пароль!'
+        f'\nЧтобы восстановить ваш пароль нужно скопировать код ссылки ниже и вставить его в поле на сайте:'
         f'\n{link}',
         # from:
         "noreply@somehost.local",
