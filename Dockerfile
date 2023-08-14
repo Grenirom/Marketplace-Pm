@@ -16,6 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN mkdir static && mkdir media && mkdir logs
 
+
 COPY . .
 
 EXPOSE 8000

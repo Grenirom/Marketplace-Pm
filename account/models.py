@@ -1,5 +1,4 @@
 from uuid import uuid4
-
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
@@ -8,8 +7,6 @@ from django.dispatch import receiver
 from django.urls import reverse
 from django_rest_passwordreset.signals import reset_password_token_created
 from django.core.mail import send_mail
-from rest_framework.decorators import permission_classes
-from rest_framework.permissions import AllowAny
 
 from .managers import UserManager
 
@@ -61,14 +58,6 @@ class CustomUser(AbstractUser):
         self.activation_code = code
 
 
-class UserProfile(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
-    # saved_products = models.ManyToManyField(Product, blank=True, related_name='saved_by')
-    birthdate = models.DateField(null=True, blank=True)
-    address = models.CharField(max_length=255, blank=True)
-    phone_number = models.CharField(max_length=20, blank=True)
-
-
 class SellerProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     store_name = models.CharField(max_length=255)
@@ -101,9 +90,11 @@ class SellerProfile(models.Model):
         ]
     )
 
+    def __str__(self):
+        return self.store_name
+
 
 @receiver(reset_password_token_created)
-@permission_classes([AllowAny, ])
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
     email_plaintext_message = "{}{}".format(reverse('password_reset:reset-password-request'),
                                             reset_password_token.key)
@@ -114,7 +105,8 @@ def password_reset_token_created(sender, instance, reset_password_token, *args, 
         # title:
         "Восстановление пароля для {title}".format(title="Mordo"),
         # message:
-        f'Здравствуйте, восстановите ваш пароль!\nЧтобы восстановить ваш пароль нужно перейти по ссылке ниже:\n'
+        f'Здравствуйте, восстановите ваш пароль!'
+        f'\nЧтобы восстановить ваш пароль нужно скопировать код ссылки ниже и вставить его в поле на сайте:'
         f'\n{link}',
         # from:
         "noreply@somehost.local",

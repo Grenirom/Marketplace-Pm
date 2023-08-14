@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
@@ -13,9 +14,8 @@ from django.contrib.auth.models import User
 from config.tasks import send_confirmation_email_task
 from .models import SellerProfile
 from .permissions import IsAuthorOrAdmin
-from .serializers import ChangePasswordSerializer
-from rest_framework.permissions import IsAuthenticated
 from account import serializers
+
 
 User = get_user_model()
 
@@ -51,11 +51,11 @@ class UserViewSet(ListModelMixin, GenericViewSet):
 
 
 class Login(TokenObtainPairView):
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (permissions.AllowAny, )
 
 
 class Refresh(TokenRefreshView):
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (permissions.AllowAny, )
 
 
 class UserProfileViewSet(viewsets.ModelViewSet):
@@ -107,6 +107,9 @@ class SellerProfileViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(profile)
         return Response(serializer.data)
 
+    def create(self, request, *args, **kwargs):
+        return Response({"detail": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
     @action(['PUT', 'PATCH'], detail=True)
     def update_profile(self, request, pk=None):
         profile = self.queryset.get(user=request.user)
@@ -136,44 +139,29 @@ class ApproveSellerView(APIView):
         return Response({"message": "Seller approved."}, status=status.HTTP_200_OK)
 
 
-class LoginView(TokenObtainPairView):
-    permission_classes = (AllowAny,)
+class SellerAllView(viewsets.ModelViewSet):
+    queryset = User.objects.filter(is_seller_pending=True)
+    permission_classes = [permissions.IsAdminUser]
 
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return serializers.SellerAdminListSerializer
+        elif self.action == 'retrieve':
+            return serializers.SellerProfileUpdateSerializer
+        else:
+            raise serializers.ValidationError({"detail": "Method not allowed"})
 
-class RefreshView(TokenRefreshView):
-    permission_classes = (AllowAny,)
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())  # Применяем фильтры
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
+    def retrieve(self, request, *args, **kwargs):
+        user_instance = self.get_object()
 
-class ChangePasswordView(generics.UpdateAPIView):
-    """
-    An endpoint for changing password.
-    """
-    serializer_class = ChangePasswordSerializer
-    model = User
-    permission_classes = (IsAuthenticated,)
-
-    def get_object(self, queryset=None):
-        obj = self.request.user
-        return obj
-
-    def update(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        serializer = self.get_serializer(data=request.data)
-
-        if serializer.is_valid():
-            # Check old password
-            if not self.object.check_password(serializer.data.get("old_password")):
-                return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
-            # set_password also hashes the password that the user will get
-            self.object.set_password(serializer.data.get("new_password"))
-            self.object.save()
-            response = {
-                'status': 'success',
-                'code': status.HTTP_200_OK,
-                'message': 'Password updated successfully',
-                'data': []
-            }
-
-            return Response(response)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            seller_profile_instance = SellerProfile.objects.get(user=user_instance)
+            serializer = self.get_serializer(seller_profile_instance)
+            return Response(serializer.data)
+        except SellerProfile.DoesNotExist:
+            return Response({"detail": "Profile does not exist"}, status=status.HTTP_404_NOT_FOUND)
