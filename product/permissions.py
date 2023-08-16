@@ -2,20 +2,20 @@ from rest_framework import permissions
 from rest_framework.permissions import SAFE_METHODS
 
 
-class IsAuthor(permissions.BasePermission):
+class IsSeller(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        return request.user == obj
+        return request.user == request.user.is_seller
 
 
-class IsAuthorOrAdmin(permissions.BasePermission):
+class IsSellerOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
-        if request.user.is_authenticated:
+        if request.user.is_seller:
             if view.action in ['create', 'update', 'partial_update', 'destroy']:
                 return True
         return False
 
     def has_object_permission(self, request, view, obj):
-        return request.user == obj.owner or request.user.is_staff
+        return request.user == request.user.is_seller or request.user.is_staff
 
 
 # class IsOwnerOrReadOnly(permissions.BasePermission):

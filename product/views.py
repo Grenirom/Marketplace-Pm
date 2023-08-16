@@ -13,7 +13,7 @@ from rest_framework.response import Response
 # from rating.serializers import ReviewActionSerializer
 from . import serializers
 from .models import Product, ProductImage, Likes, Favorite
-from .permissions import IsAuthorOrAdmin
+from .permissions import IsSellerOrAdmin
 # from .permissions import IsAuthorOrAdmin, IsAuthor
 from .serializers import ProductSerializer
 
@@ -64,7 +64,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             return [permissions.IsAuthenticatedOrReadOnly(), ]
         elif self.action in ('list', 'retrieve'):
             return [permissions.AllowAny(), ]
-        return [IsAuthorOrAdmin(), ]
+        return [IsSellerOrAdmin(), ]
 
     # @method_decorator(cache_page(60))  # Кеширование на 1 минуту
     def list(self, request, *args, **kwargs):
