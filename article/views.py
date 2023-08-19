@@ -9,7 +9,7 @@ from rest_framework.filters import SearchFilter
 
 from . import serializers
 from .models import Article
-from .permissions import IsSellerOrAdmin, IsSeller
+from .permissions import IsSellerOrAdmin
 
 
 class StandartResultPagination(PageNumberPagination):
@@ -45,12 +45,7 @@ class ArticleViewSet(ModelViewSet):
         return serializers.ArticleDetailSerializer
 
     def get_permissions(self):
-        # удалять может только автор поста либо админы
-        if self.action in ('create', 'destroy'):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
             return [IsSellerOrAdmin(), ]
-        # обновлять может только автор поста
-        elif self.action in ('update', 'partial_update'):
-            return [IsSeller(), ]
-        # просматривать могут все (list, retrive),
         return [permissions.AllowAny(), ]
 
