@@ -1,14 +1,14 @@
 from rest_framework import serializers
 
-from .models import Article
+from .models import News
 
 
-class ArticleListSerializer(serializers.ModelSerializer):
+class NewsListSerializer(serializers.ModelSerializer):
     body_preview = serializers.SerializerMethodField()
     owner_email = serializers.ReadOnlyField(source='owner.email')
 
     class Meta:
-        model = Article
+        model = News
         fields = ('id', 'title', 'owner', 'owner_email', 'image', 'body_preview')
 
     def get_body_preview(self, obj):
@@ -17,18 +17,18 @@ class ArticleListSerializer(serializers.ModelSerializer):
         return obj.body
 
 
-class ArticleCreateSerializer(serializers.ModelSerializer):
+class NewsCreateSerializer(serializers.ModelSerializer):
     owner = serializers.ReadOnlyField(source='owner.id')
     owner_email = serializers.ReadOnlyField(source='owner.email')
 
     class Meta:
-        model = Article
+        model = News
         fields = '__all__'
 
 
-class ArticleDetailSerializer(serializers.ModelSerializer):
+class NewsDetailSerializer(serializers.ModelSerializer):
     owner_email = serializers.ReadOnlyField(source='owner.email')
 
     class Meta:
-        model = Article
+        model = News
         fields = ('id', 'title', 'owner', 'owner_email', 'image', 'body')

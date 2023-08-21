@@ -14,7 +14,6 @@ from rest_framework.response import Response
 from . import serializers
 from .models import Product, ProductImage, Likes, Favorite
 from .permissions import IsSellerOrAdmin
-# from .permissions import IsAuthorOrAdmin, IsAuthor
 from .serializers import ProductSerializer
 
 
