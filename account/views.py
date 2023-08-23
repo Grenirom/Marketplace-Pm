@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
+from rest_framework.schemas import AutoSchema
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import ListModelMixin
@@ -15,7 +16,6 @@ from config.tasks import send_confirmation_email_task
 from .models import SellerProfile
 from .permissions import IsAuthorOrAdmin
 from account import serializers
-
 
 User = get_user_model()
 
@@ -51,11 +51,11 @@ class UserViewSet(ListModelMixin, GenericViewSet):
 
 
 class LoginView(TokenObtainPairView):
-    permission_classes = (permissions.AllowAny, )
+    permission_classes = (permissions.AllowAny,)
 
 
 class RefreshView(TokenRefreshView):
-    permission_classes = (permissions.AllowAny, )
+    permission_classes = (permissions.AllowAny,)
 
 
 class UserProfileViewSet(viewsets.ModelViewSet):
