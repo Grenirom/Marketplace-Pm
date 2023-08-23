@@ -6,9 +6,9 @@ from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
 
-
 from . import serializers
 from .models import News
+from .permissions import IsAdminUser, CanAccessSellerNews
 
 
 class StandartResultPagination(PageNumberPagination):
@@ -21,7 +21,9 @@ class NewsViewSet(ModelViewSet):
     pagination_class = StandartResultPagination
     filter_backends = (DjangoFilterBackend, SearchFilter)
     search_fields = ('title', 'body')
-    filterset_fields = ('owner', )
+    filterset_fields = ('owner', 'is_seller_news')
+
+    # permission_classes = [CanAccessNewsGroup, ]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -45,6 +47,19 @@ class NewsViewSet(ModelViewSet):
 
     def get_permissions(self):
         if self.action in ('create', 'update', 'partial_update', 'destroy'):
-            return [permissions.IsAdminUser(), ]
+            return [IsAdminUser(), ]
+        elif self.action == 'sellernews':
+            return [CanAccessSellerNews(), ]
         return [permissions.AllowAny(), ]
 
+    @action(detail=False, methods=['GET'])
+    def sellernews(self, request):
+        queryset = News.objects.filter(is_seller_news=True)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['GET'], permission_classes=[permissions.AllowAny, ])
+    def publicnews(self, request):
+        queryset = News.objects.filter(is_seller_news=False)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)

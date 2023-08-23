@@ -9,7 +9,7 @@ class NewsListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = News
-        fields = ('id', 'title', 'owner', 'owner_email', 'image', 'body_preview')
+        fields = ('id', 'title', 'owner', 'owner_email', 'is_seller_news', 'image', 'body_preview')
 
     def get_body_preview(self, obj):
         if len(obj.body) > 300:
@@ -31,4 +31,4 @@ class NewsDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = News
-        fields = ('id', 'title', 'owner', 'owner_email', 'image', 'body')
+        fields = ('id', 'title', 'owner', 'owner_email', 'is_seller_news', 'image', 'body')

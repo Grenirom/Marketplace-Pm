@@ -10,6 +10,7 @@ class News(models.Model):
     title = models.CharField(max_length=255)
     image = models.ImageField(upload_to='images/', null=True)
     body = models.TextField()
+    is_seller_news = models.BooleanField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
