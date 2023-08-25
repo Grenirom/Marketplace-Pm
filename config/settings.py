@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'rating',
     'article',
     'news',
+    'orders',
 ]
 
 MIDDLEWARE = [
