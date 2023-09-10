@@ -18,3 +18,4 @@ docker-compose
 coreapi
 django-cors-headers
 django-ckeditor
+channels
