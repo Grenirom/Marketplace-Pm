@@ -46,7 +46,7 @@ class NewsViewSet(ModelViewSet):
         return serializers.NewsDetailSerializer
 
     def get_permissions(self):
-        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+        if self.action in ('create', 'list', 'update', 'partial_update', 'destroy'):
             return [IsAdminUser(), ]
         elif self.action == 'sellernews':
             return [CanAccessSellerNews(), ]
@@ -54,12 +54,12 @@ class NewsViewSet(ModelViewSet):
 
     @action(detail=False, methods=['GET'])
     def sellernews(self, request):
-        queryset = News.objects.filter(is_seller_news=True)
+        queryset = News.objects.filter(is_seller_news=True).order_by('-created_at')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['GET'], permission_classes=[permissions.AllowAny, ])
     def publicnews(self, request):
-        queryset = News.objects.filter(is_seller_news=False)
+        queryset = News.objects.filter(is_seller_news=False).order_by('-created_at')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
