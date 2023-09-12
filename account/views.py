@@ -13,6 +13,7 @@ from rest_framework import status
 from django.contrib.auth.models import User
 
 from config.tasks import send_confirmation_email_task
+from product.serializers import FavoriteListSerializer
 from .models import SellerProfile
 from .permissions import IsAuthorOrAdmin
 from account import serializers
@@ -48,6 +49,14 @@ class UserViewSet(ListModelMixin, GenericViewSet):
         user.activation_code = ''
         user.save()
         return Response({'msg': 'Successfully activated your account!'}, status=200)
+
+    # @cache_page(60 * 15)
+    @action(['GET'], detail=True)
+    def favorites(self, request, pk):
+        product = self.get_object()
+        favorites = product.favorites.filter(favorite=True)
+        serializer = FavoriteListSerializer(instance=favorites, many=True)
+        return Response(serializer.data, status=200)
 
 
 class LoginView(TokenObtainPairView):
