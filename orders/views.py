@@ -39,3 +39,4 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+

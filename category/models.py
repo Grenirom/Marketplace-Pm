@@ -41,3 +41,4 @@ def category_slug_save(sender, instance, *args, **kwargs):
         instance.slug = django_slugify(''.join(alphabet.get(w, w) for w in instance.name.lower()))
 
         # instance.slug = slugify(instance.name)
+
